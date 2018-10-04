@@ -15,14 +15,24 @@ import KeychainAccess
 class APIManager: SessionManager {
     
     // MARK: TODO: Add App Keys
-    static let consumerKey = "YOUR_KEY_HERE"
-    static let consumerSecret = "YOUR_SECRET_HERE"
+    static let consumerKey = "uFTmFW66AAMEUwx3rZlZDMSCf"
+    static let consumerSecret = "LtlxIoQpBvHcqjpSMIA9Gs2E9wCJbr7xkx9EpSdBYoNedaZUgh"
 
     static let requestTokenURL = "https://api.twitter.com/oauth/request_token"
     static let authorizeURL = "https://api.twitter.com/oauth/authorize"
     static let accessTokenURL = "https://api.twitter.com/oauth/access_token"
     
     static let callbackURLString = "alamoTwitter://"
+
+    static func logout() {
+        // 1. Clear current user
+        User.current = nil
+        
+        // TODO: 2. Deauthorize OAuth tokens
+        
+        // 3. Post logout notification
+        NotificationCenter.default.post(name: NSNotification.Name("didLogout"), object: nil)
+    }
     
     // MARK: Twitter API methods
     func login(success: @escaping () -> (), failure: @escaping (Error?) -> ()) {
@@ -41,7 +51,7 @@ class APIManager: SessionManager {
                     print("Welcome \(user.name)")
                     
                     // MARK: TODO: set User.current, so that it's persisted
-                    
+                    User.current = user
                     success()
                 }
             })
@@ -49,6 +59,7 @@ class APIManager: SessionManager {
             failure(error)
         }
     }
+
     
 
     func getCurrentAccount(completion: @escaping (User?, Error?) -> ()) {
@@ -68,20 +79,26 @@ class APIManager: SessionManager {
                 }
         }
     }
+
+    
+    func updateUser() {
+        self.getCurrentAccount { (user: User?, error: Error?) in
+            User.current = user
+        }
+    }
         
     func getHomeTimeLine(completion: @escaping ([Tweet]?, Error?) -> ()) {
 
         // This uses tweets from disk to avoid hitting rate limit. Comment out if you want fresh
         // tweets,
-        if let data = UserDefaults.standard.object(forKey: "hometimeline_tweets") as? Data {
-            let tweetDictionaries = NSKeyedUnarchiver.unarchiveObject(with: data) as! [[String: Any]]
-            let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
-                Tweet(dictionary: dictionary)
-            })
-
-            completion(tweets, nil)
-            return
-        }
+//        if let data = UserDefaults.standard.object(forKey: "hometimeline_tweets") as? Data {
+//            let tweetDictionaries = NSKeyedUnarchiver.unarchiveObject(with: data) as! [[String: Any]]
+//            let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
+//                Tweet(dictionary: dictionary)
+//            })
+//            completion(tweets, nil)
+//            return
+//        }
 
         request(URL(string: "https://api.twitter.com/1.1/statuses/home_timeline.json")!, method: .get)
             .validate()
@@ -102,29 +119,153 @@ class APIManager: SessionManager {
                     UserDefaults.standard.set(data, forKey: "hometimeline_tweets")
                     UserDefaults.standard.synchronize()
 
-                    let tweets = tweetDictionaries.flatMap({ (dictionary) -> Tweet in
-                        Tweet(dictionary: dictionary)
-                    })
+                    let tweets = Tweet.tweets(with: tweetDictionaries)
                     completion(tweets, nil)
                 }
         }
     }
     
     // MARK: TODO: Favorite a Tweet
+    func favorite(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/favorites/create.json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
     
     // MARK: TODO: Un-Favorite a Tweet
-    
+    func unfavorite(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/favorites/destroy.json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
+
     // MARK: TODO: Retweet
-    
+    func retweet(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/statuses/retweet/" + String(tweet.id!) + ".json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
     // MARK: TODO: Un-Retweet
+    func unretweet(_ tweet: Tweet, completion: @escaping (Tweet?, Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/statuses/unretweet/" + String(tweet.id!) + ".json"
+        let parameters = ["id": tweet.id]
+        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess,
+                let tweetDictionary = response.result.value as? [String: Any] {
+                let tweet = Tweet(dictionary: tweetDictionary)
+                completion(tweet, nil)
+            } else {
+                completion(nil, response.result.error)
+            }
+        }
+    }
     
     // MARK: TODO: Compose Tweet
+    func composeTweet(status: String, replyTo: String? = nil, completion: @escaping (Error?) -> ()) {
+        let urlString = "https://api.twitter.com/1.1/statuses/update.json";
+        let parameters = ["status": status]
+        request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
+            if response.result.isSuccess {
+                print("successfully tweeted")
+                completion(nil)
+            } else {
+                completion(response.result.error)
+            }
+        }
+    }
     
     // MARK: TODO: Get User Timeline
-    
-    
+    func getUserTimeLine(completion: @escaping ([Tweet]?, Error?) -> ()) {
+        request(URL(string: "https://api.twitter.com/1.1/statuses/user_timeline.json")!, method: .get)
+            .validate()
+            .responseJSON { (response) in
+                switch response.result {
+                case .failure(let error):
+                    completion(nil, error)
+                    return
+                case .success:
+                    guard let tweetDictionaries = response.result.value as? [[String: Any]] else {
+                        print("Failed to parse tweets")
+                        let error = NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey : "Failed to parse tweets"])
+                        completion(nil, error)
+                        return
+                    }
+                    
+                    let tweets = Tweet.tweets(with: tweetDictionaries)
+                    completion(tweets, nil)
+                }
+        }
+    }
+
+    func getBannerURLs(completion: @escaping ([String: Any]?, Error?) -> ()) {
+        request(URL(string: "https://api.twitter.com/1.1/users/profile_banner.json?screen_name=" + User.current!.screenName!)!, method: .get)
+            .validate()
+            .responseJSON { (response) in
+                switch response.result {
+                case .failure(let error):
+                    print(error.localizedDescription)
+                    return
+                case .success:
+                    guard let bannerDictionary = response.result.value as? [String: Any] else {
+                        print("Failed to parse tweets")
+                        let error = NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey : "Failed to parse tweets"])
+                        print(error.localizedDescription)
+                        return
+                    }
+                    let bannerImgURLs = bannerDictionary["sizes"] as? [String: Any]
+                   completion(bannerImgURLs, nil)
+                }
+        }
+    }
     //--------------------------------------------------------------------------------//
-    
+    func getTweetCell(cell: tweetCell, tweet: Tweet) -> tweetCell {
+        var profileImgURL = tweet.user?.profileImageURL! ?? "";
+        profileImgURL = profileImgURL.replacingOccurrences(of: "_normal", with: "")
+        cell.tweet = tweet
+        cell.selectionStyle = .none
+        cell.usernameLabel.text = tweet.user?.name
+        cell.tweetLabel.text = tweet.text
+        cell.handleLabel.text = "@" + String(tweet.user?.screenName ?? "")
+        cell.profileImageView.af_setImage(withURL: URL(string: profileImgURL)!)
+        cell.dateLabel.text = tweet.timeAgo
+        
+        if (tweet.retweeted!) {
+            cell.retweetImageView.image = UIImage(named: "retweet-icon-green")
+        } else {
+            cell.retweetImageView.image = UIImage(named: "retweet-icon")
+        }
+        
+        if (tweet.favorited!) {
+            cell.favoriteImageView.image = UIImage(named: "favor-icon-red")
+        } else {
+            cell.favoriteImageView.image = UIImage(named: "favor-icon")
+        }
+        return cell
+    }
     
     //MARK: OAuth
     static var shared: APIManager = APIManager()
