@@ -27,18 +27,20 @@ The following **stretch** features are implemented:
 
 The following **additional** features are implemented:
 
-- [ ] List anything else that you can get done to improve the app functionality!
+- [x] Character count near the keyboard
+- [x] view the statistics: number of favorites, number of retweets
+- [x] profile page view: view user tweets only, view profile picture, view stats
 
 Please list two areas of the assignment you'd like to **discuss further with your peers** during the next class (examples include better ways to implement something, how to extend your app in certain ways, etc):
 
-1.
-2.
+1. animations and transition effects
+2. detail page view with functional reply button
 
 ## Video Walkthrough
 
 Here's a walkthrough of implemented user stories:
 
-<img src='https://github.com/willthexu/WXCP_Twitter/blob/master/images/done.gif' title='Video Walkthrough' width='325' alt='Video Walkthrough' />
+<img src='https://github.com/willthexu/WXCP_Twitter/blob/master/images/done.gif' title='Video Walkthrough' width='400' alt='Video Walkthrough' />
 
 GIF created with [LiceCap](http://www.cockos.com/licecap/).
 
