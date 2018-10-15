@@ -11,7 +11,7 @@ import Alamofire
 import AlamofireImage
 import DateToolsSwift
 
-class ProfileViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class ProfileViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, MyCustomCellDelegator {
     
     @IBOutlet weak var bannerImageView: UIImageView!
     @IBOutlet weak var profileImageView: UIImageView!
@@ -22,6 +22,8 @@ class ProfileViewController: UIViewController, UITableViewDataSource, UITableVie
     @IBOutlet weak var followersCountLabel: UILabel!
     @IBOutlet weak var followingCountLabel: UILabel!
     
+    var selectedTweet: Tweet!
+    var tweet: Tweet? = nil
     var tweets: [Tweet]! = []
     let refreshControl = UIRefreshControl()
     override func viewDidLoad() {
@@ -87,8 +89,25 @@ class ProfileViewController: UIViewController, UITableViewDataSource, UITableVie
         return tweets.count
     }
     
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        self.selectedTweet = tweets[indexPath.row]
+        performSegue(withIdentifier: "toDetail", sender: nil)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let dest = segue.destination as? DetailViewController {
+            dest.tweet = self.selectedTweet
+        } else if let dest = segue.destination as? WriteTweetViewController {
+            if (self.selectedTweet != nil) {
+                dest.titleString = "Reply to " + (self.selectedTweet.user?.name)!
+                dest.tweet = self.selectedTweet
+            }
+        }
+    }
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "tweetCell", for: indexPath) as! tweetCell
+        cell.delegate = self
         let tweet = tweets[indexPath.row]
         return APIManager.shared.getTweetCell(cell: cell, tweet: tweet)
     }
@@ -100,6 +119,14 @@ class ProfileViewController: UIViewController, UITableViewDataSource, UITableVie
     
     @IBAction func logoutPressed(_ sender: Any) {
         APIManager.logout()
+    }
+    
+    
+    func callSegueFromCell(dataObject: Tweet) {
+        //try not to send self, just to avoid retain cycles(depends on how you handle the code on the next controller)
+        print(dataObject.desciption)
+        self.selectedTweet = dataObject
+        self.performSegue(withIdentifier: "toWrite", sender: dataObject)
     }
 }
 

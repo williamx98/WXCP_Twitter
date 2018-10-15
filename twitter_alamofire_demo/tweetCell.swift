@@ -23,6 +23,7 @@ class tweetCell: UITableViewCell {
     @IBOutlet weak var replyImageView: UIImageView!
     @IBOutlet weak var statsImageView: UIImageView!
     
+    var delegate:MyCustomCellDelegator!
     var tweet: Tweet!
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -52,11 +53,13 @@ class tweetCell: UITableViewCell {
     func favorited() {
         tweet.favorited = !tweet.favorited!
         if (tweet.favorited!) {
+            tweet.favoriteCount! += 1
             self.favoriteImageView.image = UIImage(named: "favor-icon-red")
             APIManager.shared.favorite(self.tweet, completion: {(tweet: Tweet?, error: Error?) -> () in
                 
             })
         } else {
+            tweet.favoriteCount! -= 1
             self.favoriteImageView.image = UIImage(named: "favor-icon")
             APIManager.shared.unfavorite(self.tweet, completion: {(tweet: Tweet?, error: Error?) -> () in
                 
@@ -67,21 +70,23 @@ class tweetCell: UITableViewCell {
     func retweet() {
         tweet.retweeted = !tweet.retweeted!
         if (tweet.retweeted!) {
+            tweet.retweetCount! += 1
             self.retweetImageView.image = UIImage(named: "retweet-icon-green")
             APIManager.shared.retweet(self.tweet, completion: {(tweet: Tweet?, error: Error?) -> () in
                 
             })
         } else {
+            tweet.retweetCount! -= 1
             self.retweetImageView.image = UIImage(named: "retweet-icon")
             APIManager.shared.unretweet(self.tweet, completion: {(tweet: Tweet?, error: Error?) -> () in
                 
             })
-
+            
         }
     }
-
+    
     func reply() {
-        print("reply")
+        self.delegate.callSegueFromCell(dataObject: self.tweet)
     }
     
     func stats() {

@@ -187,7 +187,10 @@ class APIManager: SessionManager {
     // MARK: TODO: Compose Tweet
     func composeTweet(status: String, replyTo: String? = nil, completion: @escaping (Error?) -> ()) {
         let urlString = "https://api.twitter.com/1.1/statuses/update.json";
-        let parameters = ["status": status]
+        var parameters = ["status": status]
+        if (replyTo != nil) {
+            parameters = ["status": status, "in_reply_to_status_id": replyTo!]
+        }
         request(urlString, method: .post, parameters: parameters, encoding: URLEncoding.queryString).validate().responseJSON { (response) in
             if response.result.isSuccess {
                 print("successfully tweeted")

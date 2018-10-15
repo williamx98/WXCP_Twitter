@@ -50,6 +50,6 @@ class User {
         following = dictionary["friends_count"] as? Int
     }
     
-    public var desciption: String {return (self.dictionary?.description)!}
+    public var desciption: String {return self.name! + " " + self.screenName!}
 
 }

@@ -10,7 +10,9 @@ import UIKit
 
 class WriteTweetViewController: UIViewController, UITextViewDelegate {
 
+    var tweet: Tweet? = nil
     var titleString: String = "Post a Tweet"
+    var reply: Bool = false
     @IBOutlet weak var tweetField: UITextView!
     let numberToolbar = UIToolbar(frame:CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 50))
     override func viewDidLoad() {
@@ -27,6 +29,11 @@ class WriteTweetViewController: UIViewController, UITextViewDelegate {
             UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(WriteTweetViewController.doneWithNumberPad))]
         numberToolbar.sizeToFit()
         tweetField.inputAccessoryView = numberToolbar
+    
+        if (tweet != nil) {
+            self.tweetField.text = "@" + (tweet?.user?.screenName)! + " "
+            self.reply = true
+        }
     }
     
     func textViewDidChange(_ textView: UITextView) {
@@ -38,6 +45,9 @@ class WriteTweetViewController: UIViewController, UITextViewDelegate {
     
     func textViewDidBeginEditing(_ textView: UITextView) {
         textView.text = "";
+        if (reply) {
+            textView.text = "@" + (tweet?.user?.screenName)! + " "
+        }
         textView.textColor = UIColor.black
     }
     
@@ -50,13 +60,21 @@ class WriteTweetViewController: UIViewController, UITextViewDelegate {
     }
     
     func doneWithNumberPad() {
-        APIManager.shared.composeTweet(status: tweetField.text) { (error: Error?) in
-            self.performSegue(withIdentifier: "toHome", sender: nil)
-            print(error)
+        if (tweet == nil) {
+            APIManager.shared.composeTweet(status: tweetField.text) { (error: Error?) in
+                self.performSegue(withIdentifier: "toHome", sender: nil)
+                print(error)
+            }
+        } else {
+            APIManager.shared.composeTweet(status: tweetField.text, replyTo: String((self.tweet?.id)!)) { (error: Error?) in
+                self.performSegue(withIdentifier: "toHome", sender: nil)
+                print(error)
+            }
         }
     }
 
     @IBAction func cancelPressed(_ sender: Any) {
+        print("here")
         performSegue(withIdentifier: "toHome", sender: nil)
     }
     /*

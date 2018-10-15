@@ -25,12 +25,18 @@ extension String {
     }
 }
 
-class TimelineViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-    @IBOutlet weak var logoutButton: UIBarButtonItem!
-    @IBOutlet weak var tableView: UITableView!
+protocol MyCustomCellDelegator {
+    func callSegueFromCell(dataObject: Tweet)
+}
 
+class TimelineViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, MyCustomCellDelegator {
+    @IBOutlet weak var tableView: UITableView!
+    
+  
+    var selectedTweet: Tweet!
     var tweets: [Tweet]! = []
     let refreshControl = UIRefreshControl()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationController?.navigationBar.barTintColor = "00aced".colorFromHex()
@@ -69,6 +75,22 @@ class TimelineViewController: UIViewController, UITableViewDataSource, UITableVi
         })
     }
     
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        self.selectedTweet = tweets[indexPath.row]
+        performSegue(withIdentifier: "toDetail", sender: nil)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let dest = segue.destination as? DetailViewController {
+            dest.tweet = self.selectedTweet
+        } else if let dest = segue.destination as? WriteTweetViewController {
+            if (self.selectedTweet != nil) {
+                dest.titleString = "Reply to " + (self.selectedTweet.user?.name)!
+                dest.tweet = self.selectedTweet
+            }
+        }
+    }
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if (tweets == nil) {
             return 0
@@ -78,6 +100,7 @@ class TimelineViewController: UIViewController, UITableViewDataSource, UITableVi
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "tweetCell", for: indexPath) as! tweetCell
+        cell.delegate = self
         let tweet = tweets[indexPath.row]
         return APIManager.shared.getTweetCell(cell: cell, tweet: tweet)
     }
@@ -87,8 +110,9 @@ class TimelineViewController: UIViewController, UITableViewDataSource, UITableVi
         // Dispose of any resources that can be recreated.
     }
     
-    @IBAction func logoutPressed(_ sender: Any) {
-        APIManager.logout()
+    func callSegueFromCell(dataObject: Tweet) {
+        //try not to send self, just to avoid retain cycles(depends on how you handle the code on the next controller)
+        self.selectedTweet = dataObject
+        self.performSegue(withIdentifier: "toWrite", sender: dataObject)
     }
-    
 }
